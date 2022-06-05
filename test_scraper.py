@@ -1,6 +1,4 @@
-from cgi import test
 import unittest
-import pathlib as pl
 from currys_scraper import CurrysLaptopScraper
 
 class ScraperTestCase(unittest.TestCase):
