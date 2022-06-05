@@ -25,3 +25,7 @@ The `CurrysLaptopScraper` class uses a Selenium Chromedriver instance to launch 
 ## Retrieving data for each laptop
 
 Next, the scraper begins to collect details from each page in the Python list of URLs. Before it does that though, a UUID is generated for each laptop. All the details are saved in a python dictionary called `attributes`. The first key-value pair stored is the product code for each individual laptop. Then in order - `title`, `image`, `price`, `rating` (if present), `ratingCount` (if present) and specifcations. The specifications are retrieved when the scraper's selenium webdriver scrolls down the page and clicks on the specifcations section. Once the python dictionary is made for each laptop, the dictionary is saved to a json file in the working directory in a folder called `raw_data`. Each laptop page has its own entry with a `data.json` file containing all the key-value pairs, as well as an image file corresponding the laptop.
+
+## Refactoring code
+
+Added decorators, refactored code, created docstrings for functions and created test file for unit tests.
