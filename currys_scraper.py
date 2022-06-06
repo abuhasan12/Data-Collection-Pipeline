@@ -1,11 +1,15 @@
+import sys
 import requests
+import re
 import json
 import os
 import time
 import uuid
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
-from selenium.common.exceptions import ElementClickInterceptedException
+from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import UnexpectedAlertPresentException
+from data_processing import process_data_from_to_dict
 
 """
 go through and ask urself if i can understand from whats happening or do i need to make variables and document
@@ -26,6 +30,7 @@ scraped_attributes = self.scrape(url)
 except ElementClickInterceptedException:
 self.click_popup()
 scraped_attributes = self.scrape(url)
+selenium.common.exceptions.ElementNotInteractableException: Message: element not interactable for close popup
 """
 
 
@@ -36,7 +41,7 @@ class CurrysLaptopScraper:
     The attribute urls will be populated with the URLs of all laptops on the website.
     '''
 
-    def __init__(self, chromedriver_path: str):
+    def __init__(self, chromedriver: str):
         '''
         An instance of the CurrysLaptopScraper is a web-scraper object that will scrape the data for all laptops on the Currys website.
         The attribute base_url is set to "https://www.currys.co.uk/".
@@ -45,14 +50,14 @@ class CurrysLaptopScraper:
         '''
         self.__base_url = "https://www.currys.co.uk/"
         self.__urls = set([])
-        print(self.__urls)
-        self.chromedriver_path = chromedriver_path
+        self.__data = []
+        self.chromedriver = chromedriver
         self.options = webdriver.ChromeOptions()
         self.options.add_argument("--start-maximized")
         self.options.add_experimental_option("excludeSwitches", ["enable-automation"])
         self.options.add_experimental_option('useAutomationExtension', False)
         self.options.add_argument("--disable-blink-features=AutomationControlled")
-        self.driver = webdriver.Chrome(self.chromedriver_path, options=self.options)
+        self.driver = webdriver.Chrome(self.chromedriver, options=self.options)
     
     @property
     def base_url(self) -> str:
@@ -67,6 +72,13 @@ class CurrysLaptopScraper:
         Getter for urls attribute which is an empty set on initialization. When calling get_urls() or get_all_urls(), the set will be populated with the URLs of all laptops on the laptops page.
         '''
         return self.__urls
+    
+    @property
+    def data(self):
+        '''
+        Getter for data attribute which is an empty list on initialization. When calling scrape() or scrape_urls(), the list will be populated with the information on the laptops page.
+        '''
+        return self.__data
     
     class PageScanner:
         '''
@@ -84,27 +96,27 @@ class CurrysLaptopScraper:
 
         def get_product_code(self) -> str:
             product_code = self.driver.find_element_by_xpath('//*[@class="product-code"]').text
-            return product_code[product_code.find(":")+2 :]
+            return int(product_code[product_code.find(":")+2 :])
         
         def get_title(self) -> str:
-            return self.driver.find_element_by_xpath('//h1[@class="product-name"]').text
+            return re.sub(r'[^0-9A-Za-z.,"/&\-]', ' ', self.driver.find_element_by_xpath('//h1[@class="product-name"]').text)
         
         def get_image(self) -> str:
             return self.driver.find_element_by_xpath('//div[@class="carouselitem active"]/a/img').get_attribute('src')
         
         def get_price(self) -> str:
-            return self.driver.find_elements_by_xpath('//span[@class="value"]')[1].text[1:]
+            return float(self.driver.find_elements_by_xpath('//span[@class="value"]')[1].text[1:].replace(',',''))
         
         def get_rating(self):
             try:
                 rating = self.driver.find_element_by_xpath('//span[@class="star-ratings"]').get_attribute('title')
-                return rating[0:rating.find(' ')]
+                return float(rating[0:rating.find(' ')])
             except:
                 return None
         
         def get_rating_count(self):
             try:
-                return self.driver.find_element_by_xpath('//span[@class="rating-count"]/a').text[1:-1]
+                return int(self.driver.find_element_by_xpath('//span[@class="rating-count"]/a').text[1:-1])
             except:
                 return None
 
@@ -114,7 +126,9 @@ class CurrysLaptopScraper:
             for spec in specs:
                 spec_key = self.get_spec_key(spec).title().replace(" ", "")
                 spec_key = spec_key[0].lower() + spec_key[1:]
+                spec_key = re.sub(r'[^0-9A-Za-z.,"/&\-]', ' ', spec_key)
                 spec_value = self.get_spec_value(spec)
+                spec_value = re.sub(r'[^0-9A-Za-z.,"/&\-]', ' ', spec_value)
                 specs_dict[spec_key] = spec_value
             return specs_dict
         
@@ -237,6 +251,7 @@ class CurrysLaptopScraper:
                 page_not_searched = True
             except NoSuchElementException:
                 pass
+        self.__urls = list(self.__urls)
 
     @staticmethod
     def directory_check():
@@ -245,15 +260,10 @@ class CurrysLaptopScraper:
         '''
         if not os.path.exists('raw_data'):
             os.makedirs('raw_data')
-    
-    @__delay_2
-    @__function_timer
-    def scrape_and_save(self, url: str):
+
+    def scrape(self, url) -> dict:
         '''
         Function to scrape the data (see help(CurrysLaptopScraper.PageScanner for a list) of a single laptop page.
-        The scraped data is then saved into a file called data.json inside the directory created previously (raw_data - if this was not previously created, it will be created here.)
-        The file will be inside the raw_data folder under another folder which corresponds to the ID of the laptop.
-        There will also be an image file saved of the laptop.
         The data is scraped as a dictionary before saved as a json file. The dictionary key-value pairs correspond to the information received by PageScanner:
         (uuid is created using Pythons uuid library
         url is the url of the laptop page)
@@ -264,30 +274,6 @@ class CurrysLaptopScraper:
         rating = Rating
         ratingCount = Rating Count
         (the key-value pairs of the specifications are dependent on what is available on the page under the Specifications tab.)
-        '''
-        def save(attributes):
-            '''
-            See help(CurrysLaptopScraper.scrape_and_save) for details.
-            '''
-            folder_path = "raw_data/" + attributes['productID']
-            if not os.path.exists(folder_path):
-                os.makedirs(folder_path)
-                with open(os.path.join(folder_path, 'data.json'), 'w') as fp:
-                    json.dump(attributes, fp)
-                image_file_name = attributes['productID'] + '.jpg'
-                request_headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36'}
-                image_request = requests.get(attributes['imgSrc'], headers=request_headers)
-                with open(os.path.join(folder_path, image_file_name), 'wb') as f:
-                    f.write(image_request.content)
-            else:
-                print(f"Folder already exists for {attributes['productID']}")
-        
-        self.directory_check()
-        save(self.scrape(url))
-
-    def scrape(self, url) -> dict:
-        '''
-        See help(CurrysLaptopScraper.scrape_and_save) for details.
         '''
         page_scanner = self.PageScanner(self.driver)
         attributes = {
@@ -304,57 +290,92 @@ class CurrysLaptopScraper:
         time.sleep(1)
         specs = page_scanner.get_specs()
         attributes.update(specs)
+        self.__data.append(attributes)
         return attributes
-
-    @__function_timer
-    def scrape_urls(self):
-        '''
-        Function that loops through all URLs (if any) of the urls set (converted to a list) and runs scrape() on all of them.
-        TODO: handle popups
-        '''
-        if len(self.urls) == 0:
-            print("There are no URLs to scrape! Run get_urls()")
-        else:
-            self.__urls = list(self.__urls)
-            for url in self.urls:
-                self.go_to_page(url)
-                try:
-                    self.scrape_and_save(url)
-                except ElementClickInterceptedException:
-                    self.click_popup()
-                    self.scrape_and_save(url)
     
-    def click_popup(self):
+    @__function_timer
+    def save_local(self, attributes):
+        '''
+        Function to save the data of a page into a file called data.json inside the directory created previously (raw_data - if this was not previously created, it will be created here.)
+        The file will be inside the raw_data folder under another folder which corresponds to the ID of the laptop.
+        There will also be an image file saved of the laptop.
+        '''
+        self.directory_check()
+        file_folder = str(attributes['productID'])
+        folder_path = "raw_data/" + file_folder
+        processed_attributes = process_data_from_to_dict(attributes)
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+            with open(os.path.join(folder_path, 'data.json'), 'w') as fp:
+                json.dump(attributes, fp)
+            with open(os.path.join(folder_path, f"{attributes['productID']}.json"), 'w') as fp:
+                json.dump(processed_attributes, fp)
+            image_file_name = file_folder + '.jpg'
+            request_headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36'}
+            image_request = requests.get(attributes['imgSrc'], headers=request_headers)
+            with open(os.path.join(folder_path, image_file_name), 'wb') as f:
+                f.write(image_request.content)
+        else:
+            print(f"Folder already exists for {file_folder}")
+    
+    def close_popup(self):
         '''
         Function to handle popups when scraping information from a laptop's page.
         '''
-        buttons = self.driver.find_elements_by_xpath('//button')
-        for button in buttons:
-            if "accept" in button.text.lower() and "cookies" in button.text.lower():
-                accept_cookies_button = button
-        accept_cookies_button.click()
+        close_button = self.driver.find_element_by_xpath('//a[@data-close-type="x_close"]')
+        close_button.click()
 
     def end_session(self):
         '''
         Function to quit the Selenium Chromedriver
         '''
         self.driver.quit()
+    
+    def scrape_urls(self):
+        '''
+        TODO: Handle popups
+        '''
+        self.go_to_page(self.base_url)
+        self.accept_cookies()
+        self.search_laptops()
+        self.get_all_urls()
+        self.__urls = list(self.__urls)
 
 
 if __name__ == '__main__':
-    laptop_scraper = CurrysLaptopScraper(chromedriver_path="./chromedriver102/chromedriver_win32/chromedriver")
-    laptop_scraper.go_to_page(laptop_scraper.base_url)
-    laptop_scraper.accept_cookies()
-    laptop_scraper.search_laptops()
-    laptop_scraper.get_all_urls()
+    laptop_scraper = CurrysLaptopScraper(chromedriver="./chromedriver102/chromedriver_win32/chromedriver")
     laptop_scraper.scrape_urls()
-    # first_forty = laptop_scraper.urls[0:41]
-    # for each in first_forty:
-    #     try:
-    #         laptop_attributes = laptop_scraper.scrape(each)
-    #     except ElementClickInterceptedException:
-    #         laptop_scraper.click_popup()
-    #         laptop_attributes = laptop_scraper.scrape(each)
-    #     laptop_scraper.save_scraped(laptop_attributes)
-    time.sleep(10)
+    for url in laptop_scraper.urls:
+        laptop_scraper.go_to_page(url)
+        time.sleep(2)
+        try:
+            attributes = laptop_scraper.scrape(url)
+            laptop_scraper.save_local(attributes)
+        except UnexpectedAlertPresentException:
+            laptop_scraper.close_popup()
+            attributes = laptop_scraper.scrape(url)
+            laptop_scraper.save_local(attributes)
+        except WebDriverException as e:
+            if 'from target frame detached' in str(e):
+                time.sleep(2)
+                attributes = laptop_scraper.scrape(url)
+                laptop_scraper.save_local(attributes)
+            else:
+                print(e)
+                sys.exit()
     laptop_scraper.end_session()
+        
+
+# need to change back to get all urls and scrape all urls once done testing, also currently not saving to directory - make it try to upload to s3 instead and if it cant then save to directory.
+# same with db if it fails then save to one file
+
+'''
+so
+1. modify and add another file to upload files (data and images) to s3 and if they fail then save locally
+2. after processing the data, upload to db - and if fails save locally
+3. configure these in other files and call them in main
+4. after all this refactor code and test again - and add code to make sure duplicates aren't made in s3 or database and image files
+5. then containerise and ec2
+6. then monitoring and alerting
+7. then ci/cd
+'''

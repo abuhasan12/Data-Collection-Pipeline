@@ -15,7 +15,7 @@ pip install -r requirements.txt
 ## Run
 
 ```python
-python currys_scraper.py
+python main.py
 ```
 
 ## Finding each laptop page
@@ -29,3 +29,7 @@ Next, the scraper begins to collect details from each page in the Python list of
 ## Refactoring code
 
 Added decorators, refactored code, created docstrings for functions and created test file for unit tests.
+
+## Upload data to the cloud
+
+The aws_config file should be used to configure aws security credentials and rds database credentials. The scraper will now create a 'data-collection' bucket in your aws s3 service with a 'raw_data' folder inside for the json files and image file of each laptop. If it fails, it will save the files locally. After the data of every laptop is processed, the data is uploaded to your RDS database. If this fails, the data is saved locally.
