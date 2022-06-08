@@ -15,6 +15,8 @@ RUN chmod +x /usr/local/bin/chromedriver
 
 COPY requirements.txt ./
 
+RUN python -m pip install --upgrade pip
+
 RUN pip install -r requirements.txt --user
 
 COPY README.md main.py currys_scraper.py data_processing.py s3_upload.py rds_upload.py aws_config.py chromedriver.exe ./
