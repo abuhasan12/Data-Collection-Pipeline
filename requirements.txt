@@ -10,9 +10,6 @@ certifi==2021.5.30
 cffi
 charset-normalizer
 colorama
-conda==4.3.16
-conda-content-trust==0.1.2
-conda-package-handling
 cryptography
 cycler==0.11.0
 debugpy==1.6.0
