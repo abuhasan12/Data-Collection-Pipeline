@@ -47,7 +47,6 @@ nbformat==5.4.0
 nest-asyncio==1.5.5
 numpy==1.22.4
 oauthlib==3.2.0
-opencv-python==4.5.5.64
 opt-einsum==3.3.0
 packaging==21.3
 parso==0.8.3
