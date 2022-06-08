@@ -86,4 +86,3 @@ This will ask you to add the cron configuration in a text editor. Below is a sam
 15 4 * * * docker rmi -f $(docker images -a -q)
 20 4 * * * docker pull abuh12/currys-laptop-scraper
 30 4 * * * docker run -d --env-file YOUR/ENV/FILE/PATH/.env abuh12/currys-laptop-scraper
-
