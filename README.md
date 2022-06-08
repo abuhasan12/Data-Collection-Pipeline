@@ -14,6 +14,8 @@ pip install -r requirements.txt
 
 ## Run
 
+WARNING: If you are not running the file from the docker image, remember to set up your environment variables in the aws_config.py file.
+
 ```python
 python main.py
 ```
@@ -39,7 +41,7 @@ The aws_config file should be used to configure aws security credentials and rds
 A Dockerfile has been created that will build the application when running using docker. The Dockerfile should be configured to include your AWS and DB credentials using environment variables. Once configured, build the image using
 `docker build -t "YOUR_CHOSEN_IMAGE_NAME" .`
 example:
-`docker build -t scraper .`
+`docker build -t currys-laptop-scraper .`
 Once built, a docker container can be built and ran by executing the command
 `docker run "YOUR_CHOSEN_IMAGE_NAME"`
 To run the Docker file on an EC2 instance, make sure you have configured the RDS security group to allow inbound traffic from your EC2 instance.
@@ -57,7 +59,7 @@ and set these variables
 `username=`
 `password=`
 once that is done, you can run the image using
-`docker run --env-file .env -d abuh12/currys-laptop-scraper`
+`docker run -d --env-file .env abuh12/currys-laptop-scraper`
 
 ## Monitoring using Prometheus and Grafana
 
@@ -71,3 +73,17 @@ For grafana:
 2. launch localhost:3000 in your browser (default username-password are admin-admin)
 3. Add prometheus datasource using url of YOUR_EC2_PUBLIC_IP:9090
 4. Create dashboards with visuals to monitor your docker containers.
+
+## CI/CD
+
+A CI pipeline was configured whenever there is a git push to this repository's main branch using github secrets and github actions and workflow. Check out the main.yml file in .github/workflows for the file configuration. Set up a CRON job in your EC2 instance to pull the latest image daily by running
+`sudo crontab -e`
+This will ask you to add the cron configuration in a text editor. Below is a sample:
+
+0 4 * * * sudo service docker restart
+5 4 * * * docker login
+10 4 * * * docker rm -vf $(docker ps -a -q)
+15 4 * * * docker rmi -f $(docker images -a -q)
+20 4 * * * docker pull abuh12/currys-laptop-scraper
+30 4 * * * docker run -d --env-file YOUR/ENV/FILE/PATH/.env abuh12/currys-laptop-scraper
+
