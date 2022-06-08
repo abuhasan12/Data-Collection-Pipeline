@@ -11,7 +11,7 @@ cffi
 charset-normalizer
 colorama
 conda==4.3.16
-conda-content-trust
+conda-content-trust==0.1.2
 conda-package-handling
 cryptography
 cycler==0.11.0
