@@ -33,3 +33,41 @@ Added decorators, refactored code, created docstrings for functions and created 
 ## Upload data to the cloud
 
 The aws_config file should be used to configure aws security credentials and rds database credentials. The scraper will now create a 'data-collection' bucket in your aws s3 service with a 'raw_data' folder inside for the json files and image file of each laptop. If it fails, it will save the files locally. After the data of every laptop is processed, the data is uploaded to your RDS database. If this fails, the data is saved locally.
+
+## Docker and EC2
+
+A Dockerfile has been created that will build the application when running using docker. The Dockerfile should be configured to include your AWS and DB credentials using environment variables. Once configured, build the image using
+`docker build -t "YOUR_CHOSEN_IMAGE_NAME" .`
+example:
+`docker build -t scraper .`
+Once built, a docker container can be built and ran by executing the command
+`docker run "YOUR_CHOSEN_IMAGE_NAME"`
+To run the Docker file on an EC2 instance, make sure you have configured the RDS security group to allow inbound traffic from your EC2 instance.
+Download and login to docker from your EC2 instance and run the docker daemon
+run `docker pull abuh12/currys-laptop-scraper`
+Once you have pulled the docker image, create an environment file, example:
+`sudo nano .env`
+and set these variables
+`aws_access_key_id=`
+`aws_secret_access_key=`
+`region_name=`
+`db_host_name=`
+`db_name=`
+`port=`
+`username=`
+`password=`
+once that is done, you can run the image using
+`docker run --env-file .env -d abuh12/currys-laptop-scraper`
+
+## Monitoring using Prometheus and Grafana
+
+Monitoring can be done running the docker container from within the EC2 instance. Just add port 9090 inbound rules to your EC2 security group from any IP, create and configure a prometheus.yml file and daemon.json file using the files in this repository (root/prometheus.yml and etc/docker/daemon.json) then
+`sudo service docker restart`
+run prometheus docker image using
+`docker run --rm -d -p 9090:9090 --name prometheus -v/root/prometheus.yml:/"your"/"path"/prometheus.yml prom/prometheus --config.file=/"your"/"path"/prometheus.yml --web.enable-lifecycle`
+You should then be able to go to YOUR_EC2_PUBLIC_IP:9090 on your local machine to view the graphs for monitoring.
+For grafana:
+1. Download and install grafana
+2. launch localhost:3000 in your browser (default username-password are admin-admin)
+3. Add prometheus datasource using url of YOUR_EC2_PUBLIC_IP:9090
+4. Create dashboards with visuals to monitor your docker containers.

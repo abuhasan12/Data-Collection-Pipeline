@@ -1,10 +1,12 @@
+import os
+
 aws_config = {
-    'aws_access_key_id': 'access_key',
-    'aws_secret_access_key': 'secret_key',
-    'region_name': 'region',
-    'db_host_name': 'host',
-    'db_name' : 'db',
-    'port' : 'port',
-    'username' : 'un',
-    'password' : 'pw'
+    'aws_access_key_id': os.environ['aws_access_key_id'],
+    'aws_secret_access_key': os.environ['aws_secret_access_key'],
+    'region_name': os.environ['region_name'],
+    'db_host_name': os.environ['db_host_name'],
+    'db_name' : os.environ['db_name'],
+    'port' : os.environ['port'],
+    'username' : os.environ['username'],
+    'password' : os.environ['password']
 }

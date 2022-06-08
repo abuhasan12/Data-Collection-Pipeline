@@ -9,30 +9,8 @@ from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import WebDriverException
 from selenium.common.exceptions import UnexpectedAlertPresentException
+from selenium.common.exceptions import StaleElementReferenceException
 from data_processing import process_data_from_to_dict
-
-"""
-go through and ask urself if i can understand from whats happening or do i need to make variables and document
-change to laptop scraper
-browsing?
-a way to exit while loops...
-for some reason, next page wasnt clicking when i searched for 'search' - think cos of lag I also got this selenium.common.exceptions.StaleElementReferenceException: Message: stale element reference: element is not attached to the page document
-the other error is the other element would receive click one for pop up - Tell us what you think. selenium.common.exceptions.ElementClickInterceptedException: Message: element click intercepted: Other element would receive the click: 
-some products like 359336 dont have a specs section but it didnt break the program
-need to see the pop up thing and fix
-selenium.common.exceptions.WebDriverException: Message: unknown error: cannot determine loading status
-selenium.common.exceptions.WebDriverException: Message: target frame detached
-selenium.common.exceptions.UnexpectedAlertPresentException: Alert Text: {Alert text :
-//a[@data-close-type="x_close"] ^
-here ^
-try:
-scraped_attributes = self.scrape(url)
-except ElementClickInterceptedException:
-self.click_popup()
-scraped_attributes = self.scrape(url)
-selenium.common.exceptions.ElementNotInteractableException: Message: element not interactable for close popup
-"""
-
 
 class CurrysLaptopScraper:
     '''
@@ -41,7 +19,7 @@ class CurrysLaptopScraper:
     The attribute urls will be populated with the URLs of all laptops on the website.
     '''
 
-    def __init__(self, chromedriver: str):
+    def __init__(self):
         '''
         An instance of the CurrysLaptopScraper is a web-scraper object that will scrape the data for all laptops on the Currys website.
         The attribute base_url is set to "https://www.currys.co.uk/".
@@ -51,13 +29,16 @@ class CurrysLaptopScraper:
         self.__base_url = "https://www.currys.co.uk/"
         self.__urls = set([])
         self.__data = []
-        self.chromedriver = chromedriver
         self.options = webdriver.ChromeOptions()
-        self.options.add_argument("--start-maximized")
+        self.options.add_argument('--headless')
+        self.options.add_argument('--no-sandbox')
+        self.options.add_argument('--disable-dev-shm-usage')
         self.options.add_experimental_option("excludeSwitches", ["enable-automation"])
         self.options.add_experimental_option('useAutomationExtension', False)
         self.options.add_argument("--disable-blink-features=AutomationControlled")
-        self.driver = webdriver.Chrome(self.chromedriver, options=self.options)
+        self.options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36")
+        self.options.add_argument('window-size=1920,1080')
+        self.driver = webdriver.Chrome(options=self.options)
     
     @property
     def base_url(self) -> str:
@@ -175,7 +156,6 @@ class CurrysLaptopScraper:
         return __add_sleep
 
     @__delay_1
-    @__function_timer
     def go_to_page(self, url: str):
         '''
         Function to go to url of webpage that is passed as argument.
@@ -183,7 +163,6 @@ class CurrysLaptopScraper:
         self.driver.get(url)
 
     @__delay_1
-    @__function_timer
     def accept_cookies(self):
         '''
         Function to find and accept the cookies button of the page, if it exists.
@@ -199,7 +178,6 @@ class CurrysLaptopScraper:
             return e
     
     @__delay_1
-    @__function_timer
     def search_laptops(self):
         '''
         Function to change the webpage to the laptop search results. The function also has added functionality to sort the page to 50 results per page.
@@ -221,16 +199,19 @@ class CurrysLaptopScraper:
                     print(e)
     
     @__delay_2
-    @__function_timer
     def get_urls(self):
         '''
         Function to scrape the URLs of all the laptops listed on the current page and add them to the urls attribute of the object
         '''
         hrefs = self.driver.find_elements_by_xpath('//a[@class="link text-truncate pdpLink"]')
         for href in hrefs:
-            self.__urls.add(href.get_attribute('href'))
+            try:
+                self.__urls.add(href.get_attribute('href'))
+            except StaleElementReferenceException:
+                hrefs = self.driver.find_elements_by_xpath('//a[@class="link text-truncate pdpLink"]')
+                for href in hrefs:
+                    self.__urls.add(href.get_attribute('href'))
     
-    @__function_timer
     def get_all_urls(self):
         '''
         Function that calls get_urls() which scrapes the URLs of all the laptops listed on the current page and add them to the urls attribute of the object.
@@ -275,6 +256,10 @@ class CurrysLaptopScraper:
         ratingCount = Rating Count
         (the key-value pairs of the specifications are dependent on what is available on the page under the Specifications tab.)
         '''
+        for data_piece in self.data:
+            if url in data_piece.values():
+                return None
+
         page_scanner = self.PageScanner(self.driver)
         attributes = {
             'uuid' : str(uuid.uuid4()),
@@ -293,7 +278,6 @@ class CurrysLaptopScraper:
         self.__data.append(attributes)
         return attributes
     
-    @__function_timer
     def save_local(self, attributes):
         '''
         Function to save the data of a page into a file called data.json inside the directory created previously (raw_data - if this was not previously created, it will be created here.)
@@ -301,6 +285,7 @@ class CurrysLaptopScraper:
         There will also be an image file saved of the laptop.
         '''
         self.directory_check()
+        print(attributes['productID'])
         file_folder = str(attributes['productID'])
         folder_path = "raw_data/" + file_folder
         processed_attributes = process_data_from_to_dict(attributes)
@@ -333,7 +318,7 @@ class CurrysLaptopScraper:
     
     def scrape_urls(self):
         '''
-        TODO: Handle popups
+        Function to scrape the URLs and save them to the objects urls attribute.
         '''
         self.go_to_page(self.base_url)
         self.accept_cookies()
@@ -364,18 +349,3 @@ if __name__ == '__main__':
                 print(e)
                 sys.exit()
     laptop_scraper.end_session()
-        
-
-# need to change back to get all urls and scrape all urls once done testing, also currently not saving to directory - make it try to upload to s3 instead and if it cant then save to directory.
-# same with db if it fails then save to one file
-
-'''
-so
-1. modify and add another file to upload files (data and images) to s3 and if they fail then save locally
-2. after processing the data, upload to db - and if fails save locally
-3. configure these in other files and call them in main
-4. after all this refactor code and test again - and add code to make sure duplicates aren't made in s3 or database and image files
-5. then containerise and ec2
-6. then monitoring and alerting
-7. then ci/cd
-'''

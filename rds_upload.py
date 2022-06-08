@@ -1,6 +1,9 @@
 import psycopg2 as ps
 from aws_config import aws_config
 from sqlalchemy import create_engine
+import numpy as np
+import pandas as pd
+from psycopg2 import extensions
 
 def connect_to_db(host_name, dbname, port, username, password):
    try:
@@ -89,7 +92,6 @@ def load_data(df):
     df = clean_duplicates(df)
 
     engine = create_engine(f"postgresql+psycopg2://{aws_config['username']}:{aws_config['password']}@{aws_config['db_host_name']}:{aws_config['port']}/{aws_config['db_name']}")
-    # df.head(0).to_sql('Laptops', engine, if_exists='append',index=False)
     conn = engine.raw_connection()
     cursor = conn.cursor()
     exists = exists_table(cursor)
@@ -100,6 +102,12 @@ def load_data(df):
 
     cursor = conn.cursor()
     if not df.empty:
+        _NULL=extensions.AsIs('NULL')
+        pd.set_option("display.max_columns", None)
+        print(df)
+        df['rating'] = df['rating'].replace(np.NaN, 0)
+        df['ratingCount'] = df['rating'].replace(np.NaN, 0)
+        df = df.replace(np.NaN, 'NULL')
         query = (f""" INSERT INTO laptops VALUES {','.join([str(i) for i in list(df.to_records(index=False))])}""")
         cursor.execute(query)
     else:

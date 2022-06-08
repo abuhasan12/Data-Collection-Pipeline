@@ -9,7 +9,7 @@ def bucket_check(s3_client):
     if any('data-collection' in bucket['Name'] for bucket in buckets):
         pass
     else:
-        response = s3_client.create_bucket(
+        s3_client.create_bucket(
             Bucket = f'data-collection-{str(uuid.uuid4())}',
             CreateBucketConfiguration = {
                 'LocationConstraint': 'eu-west-2'
@@ -23,15 +23,24 @@ def folder_check(s3_client, check, *args):
             data_collection_bucket = bucket['Name']
     if args:
         prefix = args[0]
-        objects = s3_client.list_objects_v2(Bucket=data_collection_bucket, Prefix=prefix)['Contents']
-        if any (check in s3_object['Key'] for s3_object in objects):
-            pass
+        objects = s3_client.list_objects_v2(Bucket=data_collection_bucket, Prefix=prefix)
+        if 'Contents' in objects.keys():
+            contents = objects['Contents']
+            if any (check in s3_object['Key'] for s3_object in contents):
+                pass
+            else:
+                s3_client.put_object(Bucket=data_collection_bucket, Key=f'{prefix}{check}/')
         else:
+            s3_client.put_object(Bucket=data_collection_bucket, Key=f'{prefix}/')
             s3_client.put_object(Bucket=data_collection_bucket, Key=f'{prefix}{check}/')
     else:
-        objects = s3_client.list_objects_v2(Bucket=data_collection_bucket)['Contents']
-        if any (check in s3_object['Key'] for s3_object in objects):
-            pass
+        objects = s3_client.list_objects_v2(Bucket=data_collection_bucket)
+        if 'Contents' in objects.keys():
+            contents = objects['Contents']
+            if any (check in s3_object['Key'] for s3_object in contents):
+                pass
+            else:
+                s3_client.put_object(Bucket=data_collection_bucket, Key=f'{check}/')
         else:
             s3_client.put_object(Bucket=data_collection_bucket, Key=f'{check}/')
 
