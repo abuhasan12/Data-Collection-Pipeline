@@ -39,23 +39,29 @@ The aws_config file should be used to configure aws security credentials and rds
 ## Docker and EC2
 
 A Dockerfile has been created that will build the application when running using docker. The Dockerfile should be configured to include your AWS and DB credentials using environment variables. Once configured, build the image using
-```docker build -t "YOUR_CHOSEN_IMAGE_NAME" .
+```
+docker build -t "YOUR_CHOSEN_IMAGE_NAME" .
 ```
 example:
-```docker build -t currys-laptop-scraper .
+```
+docker build -t currys-laptop-scraper .
 ```
 Once built, a docker container can be built and ran by executing the command
-```docker run "YOUR_CHOSEN_IMAGE_NAME"
+```
+docker run "YOUR_CHOSEN_IMAGE_NAME"
 ```
 To run the Docker file on an EC2 instance, make sure you have configured the RDS security group to allow inbound traffic from your EC2 instance.
 Download and login to docker from your EC2 instance and run the docker daemon run
-```docker pull abuh12/currys-laptop-scraper
+```
+docker pull abuh12/currys-laptop-scraper
 ```
 Once you have pulled the docker image, create an environment file, example:
-```sudo nano .env
+```
+sudo nano .env
 ```
 and set these variables
-```aws_access_key_id=
+```
+aws_access_key_id=
 aws_secret_access_key=
 region_name=
 db_host_name=
@@ -65,16 +71,19 @@ username=
 password=
 ```
 once that is done, you can run the image using
-```docker run -d --env-file .env abuh12/currys-laptop-scraper
+```
+docker run -d --env-file .env abuh12/currys-laptop-scraper
 ```
 
 ## Monitoring using Prometheus and Grafana
 
 Monitoring can be done running the docker container from within the EC2 instance. Just add port 9090 inbound rules to your EC2 security group from any IP, create and configure a prometheus.yml file and daemon.json file using the files in this repository (root/prometheus.yml and etc/docker/daemon.json) then
-```sudo service docker restart
+```
+sudo service docker restart
 ```
 run prometheus docker image using
-```docker run --rm -d -p 9090:9090 --name prometheus -v/root/prometheus.yml:/"your"/"path"/prometheus.yml prom/prometheus --config.file=/"your"/"path"/prometheus.yml --web.enable-lifecycle
+```
+docker run --rm -d -p 9090:9090 --name prometheus -v/root/prometheus.yml:/"your"/"path"/prometheus.yml prom/prometheus --config.file=/"your"/"path"/prometheus.yml --web.enable-lifecycle
 ```
 You should then be able to go to YOUR_EC2_PUBLIC_IP:9090 on your local machine to view the graphs for monitoring.
 For grafana:
@@ -86,11 +95,13 @@ For grafana:
 ## CI/CD
 
 A CI pipeline was configured whenever there is a git push to this repository's main branch using github secrets and github actions and workflow. Check out the main.yml file in .github/workflows for the file configuration. Set up a CRON job in your EC2 instance to pull the latest image daily by running
-```sudo crontab -e
+```
+sudo crontab -e
 ```
 This will ask you to add the cron configuration in a text editor. Below is a sample:
 
-```0 4 * * * sudo service docker restart
+```
+0 4 * * * sudo service docker restart
 5 4 * * * docker login
 10 4 * * * docker rm -vf $(docker ps -a -q)
 15 4 * * * docker rmi -f $(docker images -a -q)
