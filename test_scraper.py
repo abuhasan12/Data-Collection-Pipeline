@@ -3,7 +3,7 @@ from currys_scraper import CurrysLaptopScraper
 
 class ScraperTestCase(unittest.TestCase):
     def setUp(self):
-        self.test = CurrysLaptopScraper(chromedriver_path="./chromedriver102/chromedriver_win32/chromedriver")
+        self.test = CurrysLaptopScraper()
     
     def test_webpage_exists(self):
         self.test.go_to_page(self.test.base_url)
