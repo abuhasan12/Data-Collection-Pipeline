@@ -323,7 +323,7 @@ class CurrysLaptopScraper:
         self.go_to_page(self.base_url)
         self.accept_cookies()
         self.search_laptops()
-        self.get_all_urls()
+        self.get_urls() # need to change back to get_all_urls()
         self.__urls = list(self.__urls)
 
 

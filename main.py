@@ -14,7 +14,7 @@ def main():
     # test_urls = ['https://www.currys.co.uk/products/lenovo-ideapad-duet-3i-10.3-2-in-1-laptop-intel-celeron-64-gb-emmc-grey-10221285.html', 'https://www.currys.co.uk/products/acer-aspire-5-a51454-14-laptop-intel-core-i3-128-gb-ssd-silver-10212861.html']
     # test_urls_2 = ['https://www.currys.co.uk/products/lenovo-ideapad-duet-3i-10.3-2-in-1-laptop-intel-celeron-64-gb-emmc-grey-10221285.html', 'https://www.currys.co.uk/products/acer-aspire-5-a51454-14-laptop-intel-core-i3-128-gb-ssd-silver-10212861.html', 'https://www.currys.co.uk/products/dell-inspiron-14-5415-14-laptop-amd-ryzen-5-256-gb-ssd-silver-10230731.html', 'https://www.currys.co.uk/products/dynabook-toshiba-satellite-pro-c40-14-laptop-intel-core-i5-256-gb-ssd-dark-blue-10235541.html']
     # for url in test_urls_2:
-    for url in laptop_scraper.urls[0:2]:
+    for url in laptop_scraper.urls[0:2]: # need to remove test
         laptop_scraper.go_to_page(url)
         try:
             attributes = laptop_scraper.scrape(url)
