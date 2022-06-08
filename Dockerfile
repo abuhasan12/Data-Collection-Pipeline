@@ -30,4 +30,4 @@ ENV port=0000
 ENV username=''
 ENV password=''
 
-CMD ["python", "main.py"]
+CMD ["python", "-u", "main.py"]
