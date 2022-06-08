@@ -50,14 +50,15 @@ run `docker pull abuh12/currys-laptop-scraper`
 Once you have pulled the docker image, create an environment file, example:
 `sudo nano .env`
 and set these variables
-`aws_access_key_id=`
-`aws_secret_access_key=`
-`region_name=`
-`db_host_name=`
-`db_name=`
-`port=`
-`username=`
-`password=`
+```aws_access_key_id=
+aws_secret_access_key=
+region_name=
+db_host_name=
+db_name=
+port=
+username=
+password=
+```
 once that is done, you can run the image using
 `docker run -d --env-file .env abuh12/currys-laptop-scraper`
 
@@ -80,9 +81,10 @@ A CI pipeline was configured whenever there is a git push to this repository's m
 `sudo crontab -e`
 This will ask you to add the cron configuration in a text editor. Below is a sample:
 
-0 4 * * * sudo service docker restart
+```0 4 * * * sudo service docker restart
 5 4 * * * docker login
 10 4 * * * docker rm -vf $(docker ps -a -q)
 15 4 * * * docker rmi -f $(docker images -a -q)
 20 4 * * * docker pull abuh12/currys-laptop-scraper
 30 4 * * * docker run -d --env-file YOUR/ENV/FILE/PATH/.env abuh12/currys-laptop-scraper
+```
