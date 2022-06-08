@@ -71,7 +71,6 @@ pyparsing==3.0.9
 pyrsistent==0.18.1
 PySocks
 python-dateutil==2.8.2
-pywin32==302
 pyzmq==23.0.0
 requests
 requests-oauthlib==1.3.1
